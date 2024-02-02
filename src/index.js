@@ -20,56 +20,87 @@ axios.defaults.headers.common["x-api-key"] = "cheia ta";
 // Cheie: live_ADqsGzTvb6PyclE1aYg8OCPkJVDbdqK1XOASXD96ZLUbPuFmcaiILK7S7HwfWlG8
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Executing code after the DOM has loaded
+// Adding styles to improve the visual appearance
+const styles = `
+  .loader {
+    display: none;
+    text-align: center;
+    margin-top: 20px;
+    font-style: italic;
+  }
+
+  .error {
+    display: none;
+    color: #ff0000;
+    text-align: center;
+    margin-top: 20px;
+  }
+
+  .cat-info {
+    display: none;
+    text-align: center;
+    margin-top: 20px;
+  }
+
+  .cat-info img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin-bottom: 10px;
+  }
+
+  /* Custom styles for SlimSelect dropdown */
+  .ss-main {
+    font-size: 14px;
+    padding: 8px;
+  }
+
+  .ss-arrow {
+    font-size: 14px;
+  }
+`;
+
+// Injecting the styles into the document head
+const styleElement = document.createElement('style');
+styleElement.textContent = styles;
+document.head.appendChild(styleElement);
+
 document.addEventListener('DOMContentLoaded', () => {
-  // Initializing SlimSelect for the breed dropdown
   const breedSelect = new SlimSelect({
     select: '.breed-select',
     placeholder: 'Select a breed'
   });
 
-  // Getting reference to loader and cat info elements
   const loaderElement = document.querySelector('.loader');
   const catInfoElement = document.querySelector('.cat-info');
 
-  // Handling breed selection change
   breedSelect.onChange((info) => {
     const selectedBreedId = info.value();
-    
-    // Showing loader and hiding cat info while fetching data
     loaderElement.style.display = 'block';
     catInfoElement.style.display = 'none';
 
-    // Fetching cat information based on selected breed
     fetchCatByBreed(selectedBreedId)
       .then(catData => {
-        // Displaying cat information
         displayCatInfo(catData);
       })
       .catch(error => {
-        // Handling errors and logging them
         console.error(error);
       })
       .finally(() => {
-        // Hiding loader and showing cat info after fetch completes
         loaderElement.style.display = 'none';
         catInfoElement.style.display = 'block';
       });
   });
 
-  // Fetching list of cat breeds on page load
   fetchBreeds()
     .then(breeds => {
-      // Populating the breed dropdown with fetched data
       populateBreedSelect(breeds);
     })
     .catch(error => {
-      // Handling errors during breed fetch and logging them
       console.error(error);
     });
 });
 
-// Function to populate the breed dropdown
 function populateBreedSelect(breeds) {
   const breedSelect = document.querySelector('.breed-select');
 
@@ -78,7 +109,6 @@ function populateBreedSelect(breeds) {
   });
 }
 
-// Function to display cat information in the cat info element
 function displayCatInfo(catData) {
   const catInfoElement = document.querySelector('.cat-info');
   catInfoElement.innerHTML = `
