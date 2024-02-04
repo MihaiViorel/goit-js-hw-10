@@ -8,113 +8,71 @@ import { Notify } from 'notiflix/build/notiflix-notify-aio';
 // npm install slim-select
 // https://slimselectjs.com/install#npm
 import SlimSelect from 'slim-select'
-// npm install axios
-// https://www.npmjs.com/package//axios 
-import axios from "axios";
-axios.defaults.headers.common["x-api-key"] = "cheia ta";
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // API-uri folosite
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Cat API: https://developers.thecatapi.com/view-account/ylX4blBYT9FaoVd6OhvR
-// Cheie: live_ADqsGzTvb6PyclE1aYg8OCPkJVDbdqK1XOASXD96ZLUbPuFmcaiILK7S7HwfWlG8
+import { fetchBreeds, fetchCatByBreed } from "./cat-api";
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Adding styles to improve the visual appearance
-const styles = `
-  .loader {
-    display: none;
-    text-align: center;
-    margin-top: 20px;
-    font-style: italic;
-  }
+const breedSelect = document.querySelector('.breed-select');
+const catInfoDiv = document.querySelector('.cat-info');
+const loaderElement = document.querySelector('.buffer');
+const errorElement = document.querySelector('.error');
 
-  .error {
-    display: none;
-    color: #ff0000;
-    text-align: center;
-    margin-top: 20px;
-  }
+const toggleLoaderAndElements = (loaderVisible, catInfoVisible, errorVisible) => {
+  loaderElement.style.display = loaderVisible ? 'block' : 'none';
+  catInfoDiv.style.display = catInfoVisible ? 'block' : 'none';
+  errorElement.style.display = errorVisible ? 'block' : 'none';
+};
+const toggleError = (errorVisible, message = '') => {
+  const errorMessage = message || 'Oops! Something went wrong! Try reloading the page!';
+  errorElement.textContent = errorMessage;
+  toggleLoaderAndElements(false, false, false, errorVisible);
+};
 
-  .cat-info {
-    display: none;
-    text-align: center;
-    margin-top: 20px;
-  }
+fetchBreeds()
+  .then((breeds) => {
+    toggleLoaderAndElements(false, false, false);
+    const fragmentElement = document.createDocumentFragment();
 
-  .cat-info img {
-    max-width: 100%;
-    height: auto;
-    border-radius: 8px;
-    margin-bottom: 10px;
-  }
-
-  /* Custom styles for SlimSelect dropdown */
-  .ss-main {
-    font-size: 14px;
-    padding: 8px;
-  }
-
-  .ss-arrow {
-    font-size: 14px;
-  }
-`;
-
-// Injecting the styles into the document head
-const styleElement = document.createElement('style');
-styleElement.textContent = styles;
-document.head.appendChild(styleElement);
-
-document.addEventListener('DOMContentLoaded', () => {
-  const breedSelect = new SlimSelect({
-    select: '.breed-select',
-    placeholder: 'Select a breed'
-  });
-
-  const loaderElement = document.querySelector('.loader');
-  const catInfoElement = document.querySelector('.cat-info');
-
-  breedSelect.onChange((info) => {
-    const selectedBreedId = info.value();
-    loaderElement.style.display = 'block';
-    catInfoElement.style.display = 'none';
-
-    fetchCatByBreed(selectedBreedId)
-      .then(catData => {
-        displayCatInfo(catData);
-      })
-      .catch(error => {
-        console.error(error);
-      })
-      .finally(() => {
-        loaderElement.style.display = 'none';
-        catInfoElement.style.display = 'block';
-      });
-  });
-
-  fetchBreeds()
-    .then(breeds => {
-      populateBreedSelect(breeds);
-    })
-    .catch(error => {
-      console.error(error);
+    breeds.forEach((breed) => {
+      const optionElement = document.createElement('option');
+      optionElement.textContent = breed.name;
+      optionElement.value = breed.id;
+      fragmentElement.append(optionElement);
     });
-});
 
-function populateBreedSelect(breeds) {
-  const breedSelect = document.querySelector('.breed-select');
+    breedSelect.appendChild(fragmentElement);
 
-  breeds.forEach(breed => {
-    breedSelect.options[breed.id] = new Option(breed.name, breed.id);
+    breedSelect.addEventListener('change', () => {
+      toggleLoaderAndElements(true, false, false);
+      const selectedBreedId = breedSelect.value;
+
+      fetchCatByBreed(selectedBreedId)
+        .then((catInformation) => {
+          const catBreed = catInformation[0].breeds.length > 0 ? catInformation[0].breeds[0] : null;
+
+          if (catBreed) {
+            catInfoDiv.innerHTML = `
+              <img src="${catInformation[0].url}" alt="Cat Image">
+              <p><strong>Breed:</strong> ${catBreed.name}</p>
+              <p><strong>Description:</strong> ${catBreed.description}</p>
+              <p><strong>Temperament:</strong> ${catBreed.temperament}</p>
+            `;
+          } else {
+            console.error('No breed information found for the selected cat.');
+          }
+
+          toggleLoaderAndElements(false, true, false);
+        })
+        .catch((error) => {
+          console.error('Error fetching cat breeds:', error.response || error);
+          toggleLoaderAndElements(false, true, true);
+        });
+    });
+  })
+  .catch((error) => {
+    console.error('Error fetching cat information:', error.response || error);
+    toggleLoaderAndElements(false, true, true);
   });
-}
-
-function displayCatInfo(catData) {
-  const catInfoElement = document.querySelector('.cat-info');
-  catInfoElement.innerHTML = `
-    <img src="${catData[0].url}" alt="Cat Image">
-    <p>Name: ${catData[0].breeds[0].name}</p>
-    <p>Description: ${catData[0].breeds[0].description}</p>
-    <p>Temperament: ${catData[0].breeds[0].temperament}</p>
-  `;
-}
